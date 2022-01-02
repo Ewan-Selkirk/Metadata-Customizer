@@ -47,7 +47,7 @@
 				// Convert YYYY-MM-DD -> Unix -> Long Date
 				release_date: new Intl.DateTimeFormat("default", {dateStyle: "full"}).format(Date.parse(details.release_date)),
 				// Return # of tracks
-				tracks: (details.tracks.total.toString() + " tracks"),
+				tracks: (details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")),
 				// Return # of disc(s) & the ratio of track to disc
 				// or just "1 disc" if only one disc
 				discs: (disc_count.length.toString() + (disc_count.length === 1 ? " disc" : " discs")
@@ -84,7 +84,7 @@
 		}
 
 		// Remove default metadata
-		for (var i = 0; i < 2; i++){
+		for (var i = 0; i < metadata.children.length - 1; i++){
 			metadata.children[1].remove();
 		}
 	}
