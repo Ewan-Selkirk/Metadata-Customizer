@@ -84,8 +84,8 @@
 		}
 
 		// Remove default metadata
-		for (var i = 0; i < metadata.children.length - 1; i++){
-			metadata.children[1].remove();
+		for (var i = 0; i < 2; i++){
+			metadata.lastChild.remove();
 		}
 	}
 
