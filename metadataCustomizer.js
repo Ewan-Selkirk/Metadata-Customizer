@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.2
+// VERSION: 0.2.1
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -52,7 +52,7 @@
 				discs: disc_count.length.toString() + (disc_count.length === 1 ? " disc" : " discs"),
 				disc_ratio: disc_count.toString().replace(",", "/"),
 				// @ts-expect-error
-				length: metadata.children[2].innerText.split(", ")[1] ?? "Unavailable"
+				length: metadata.lastChild.innerText.split(", ")[1] ?? "Unavailable"
 			})
 		});
 
