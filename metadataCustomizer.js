@@ -2,18 +2,20 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
+// VERSION: 0.2
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
 
-// TODO: Customization?
-
 (function MetadataCustomizer() {
-	const {Player, Platform, SVGIcons, CosmosAsync} = Spicetify;
+	const {Player, Platform, CosmosAsync, SVGIcons} = Spicetify;
+	const data_types = ["release_date", "tracks", "discs", "disc_ratio", "length"]
+	const default_filters = ["$release_date$", "$tracks$, $discs$ [$disc_ratio$]", "$length$"]
+	const default_icons = ["enhance", "album", "clock"]
 
 	// Make sure Spicetify has actually initiated before trying to run the extension
-	if(!(Player && Platform && SVGIcons && CosmosAsync)){
-		setTimeout(MetadataCustomizer, 1000);
+	if(!(Player && Platform && CosmosAsync && SVGIcons)){
+		setTimeout(MetadataCustomizer, 500);
 		return
 	}
 
@@ -27,14 +29,11 @@
 	});
 
 	async function ModifyMetadata() {
-		var header = document.querySelector(".main-entityHeader-headerText");
-		var metadata = header.children[2];
-		const data_values = ["release_date", "tracks", "discs"]
+		let header = document.querySelector(".main-entityHeader-headerText");
+		let metadata = header.children[2];
 
-		// I *think* this is how you do async promises in Javascript...
-		// It works ¯\_(ツ)_/¯
-		var metadata_promise = new Promise(async function(resolve) {
-			var details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
+		let metadata_promise = new Promise(async function(resolve) {
+			let details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
 
 			// Hacky ugly work about I made a 8 am
 			var disc_count = [0, 0, 0, 0, 0, 0]
@@ -50,37 +49,28 @@
 				tracks: (details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")),
 				// Return # of disc(s) & the ratio of track to disc
 				// or just "1 disc" if only one disc
-				discs: (disc_count.length.toString() + (disc_count.length === 1 ? " disc" : " discs")
-					+ (disc_count.length === 1 ? "" : " (" + disc_count.toString().replace(",", "/") + ")")),
+				discs: disc_count.length.toString() + (disc_count.length === 1 ? " disc" : " discs"),
+				disc_ratio: disc_count.toString().replace(",", "/"),
 				// @ts-expect-error
-				length: metadata.children[2].innerText.split(", ")[1]
+				length: metadata.children[2].innerText.split(", ")[1] ?? "Unavailable"
 			})
 		});
 
 		// Get the result of our promise BEFORE accessing it...
 		var new_metadata = await metadata_promise;
 
-		// TODO: Break element creation into a function for more modularity
-		// TODO: Switch Statement so things are optional
-		for (var i = 0; i < data_values.length; i++){
-			// Create new header element
-			var newHeader = header.appendChild(document.createElement("div"));
-			newHeader.classList.add("main-entityHeader-metaData");
-
-			// The header has a nested div that gives nice spacing
-			var nestedHeader = newHeader.appendChild(document.createElement("div"));
-			nestedHeader.classList.add("main-entityHeader-creatorWrapper");
+		for (var i = 0; i < 3; i++){
+			let nestedHeader = MakeNewHeader(header);
+			let customization = new Customization(data_types, default_filters[i], new_metadata);
 
 			// Create elements for the details
-			// @ts-expect-error (globals.d.ts only has 'check' as a valid option for SVGIcons)
-			// Check 'Spicetify.SVGIcons' in the DevTools for a full list
-			var icon = CreateSVG(SVGIcons.album);
+			let icon = CreateSVG(SVGIcons[default_icons[i]]);
 			nestedHeader.appendChild(icon);
-			var newElement = nestedHeader.appendChild(document.createElement("span"));
+			let newElement = nestedHeader.appendChild(document.createElement("span"));
 
 			// Add details to the new header
 			newElement.classList.add("main-type-mesto");
-			newElement.innerText = new_metadata[data_values[i]]
+			newElement.innerText = customization.ParseCustomization();
 		}
 
 		// Remove default metadata
@@ -89,6 +79,8 @@
 		}
 	}
 
+	// Check if the current page is an album
+	// TODO: Check if "/collection/tracks" is actually necessary.
 	function CheckPage() {
 		if (Platform.History.location.pathname.startsWith("/collection/tracks") || 
 			Platform.History.location.pathname.startsWith("/album/")) {
@@ -109,4 +101,67 @@
 		return elem;
 	}
 
+	// Create a new metadata header
+	function MakeNewHeader(parent){
+		// Create new header element
+		var newHeader = parent.appendChild(document.createElement("div"));
+		newHeader.classList.add("main-entityHeader-metaData");
+
+		// The header has a nested div that gives nice spacing
+		var nestedHeader = newHeader.appendChild(document.createElement("div"));
+		nestedHeader.classList.add("main-entityHeader-creatorWrapper");
+	
+		return nestedHeader;
+	}
+
+	class Customization{
+		/**
+		 * Constructor for the Customization Class
+		 * @param {string[]} tokens List of valid data types
+		 * @param {string} input The string to check for tokens in
+		 * @param {string[]} data The data to match the tokens to
+		 */
+		constructor(tokens, input, data){
+			this.tokens = tokens;
+			this.input = input;
+			this.data = data;
+		}
+
+		// Token Replacer Method
+		ParseCustomization(){
+			// List of tokens found in the input string
+			var found = this.FindTokens();
+
+			// Skip everything if no tokens were found
+			if (found.length < 1) return this.input
+
+			// Mutable version of the input string
+			var new_input = this.input;
+
+			// Replace all instances of the token with the data
+			for (var t = 0; t < found.length; t++){
+				// @ts-expect-error
+				new_input = new_input.replaceAll(`\$${found[t]}\$`, this.data[found[t]])
+			}
+
+			// Return the new string
+			return new_input;
+		}
+
+		// Token Finder Method
+		FindTokens(){
+			var found_tokens = []
+
+			// Iterate through the list of data types
+			// If a token is found, push it to the found_tokens array
+			for (var t = 0; t < this.tokens.length; t++){
+				if (this.input.includes(`\$${this.tokens[t]}\$`)){
+					found_tokens.push(this.tokens[t])
+				}
+			}
+
+			// Return the array
+			return found_tokens;
+		}
+	}
 })();

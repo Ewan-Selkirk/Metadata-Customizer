@@ -7,7 +7,7 @@ It's always annoyed the hell out of me that Spotify doesn't show when a track or
 ## Requirements
 
  - Spotify Desktop Client (Not from the Windows store if on Windows)
- - [Spicetify-cli](https://spicetify.app/docs/getting-started/installation)
+ - [Spicetify-cli](https://github.com/khanhas/spicetify-cli)
 
 ## How to Install
 
