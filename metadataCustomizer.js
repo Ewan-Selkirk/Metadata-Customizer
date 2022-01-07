@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.2.1
+// VERSION: 0.2.2
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -34,13 +34,10 @@
 
 		let metadata_promise = new Promise(async function(resolve) {
 			let details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
-
-			// Hacky ugly work about I made a 8 am
-			var disc_count = [0, 0, 0, 0, 0, 0]
+			let disc_count = {}
 	
 			// Count how many tracks there are per disc (Why does the API not just have this already???)
-			details.tracks.items.forEach(track => disc_count[track.disc_number - 1] += 1);
-			disc_count = disc_count.slice(0, disc_count.findIndex(x => x === 0));
+			details.tracks.items.forEach(track => disc_count[track.disc_number] = (disc_count[track.disc_number] || 0) + 1);
 
 			resolve({
 				// Convert YYYY-MM-DD -> Unix -> Long Date
@@ -49,8 +46,8 @@
 				tracks: (details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")),
 				// Return # of disc(s) & the ratio of track to disc
 				// or just "1 disc" if only one disc
-				discs: disc_count.length.toString() + (disc_count.length === 1 ? " disc" : " discs"),
-				disc_ratio: disc_count.toString().replace(",", "/"),
+				discs: Object.keys(disc_count).length.toString() + (Object.keys(disc_count).length === 1 ? " disc" : " discs"),
+				disc_ratio: Object.values(disc_count).toString().replaceAll(",", "/"),
 				// @ts-expect-error
 				length: metadata.lastChild.innerText.split(", ")[1] ?? "Unavailable"
 			})
