@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.2.2
+// VERSION: 0.2.3
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -77,10 +77,8 @@
 	}
 
 	// Check if the current page is an album
-	// TODO: Check if "/collection/tracks" is actually necessary.
 	function CheckPage() {
-		if (Platform.History.location.pathname.startsWith("/collection/tracks") || 
-			Platform.History.location.pathname.startsWith("/album/")) {
+		if (Platform.History.location.pathname.startsWith("/album/")) {
 			ModifyMetadata();
 		}
 	}
