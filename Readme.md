@@ -33,7 +33,7 @@ Got a suggestion? Feel free to [make an issue](https://github.com/Ewan-Selkirk/M
 - Longer albums won't have an accurate length and will instead show "about x hr".
 
 ## Screenshots
-![alt text](assets/preview.jpg "Screenshot of the Spotify window with customized metadata")
+![alt text](Assets/preview.jpg "Screenshot of the Spotify window with customized metadata")
 
 ## Acknowledgements
 - [bookmark.js](https://github.com/khanhas/spicetify-cli/blob/master/Extensions/bookmark.js) for demonstrating how to make a pretty configuration menu and giving me a lot of pointers
