@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.3
+// VERSION: 0.4
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -98,19 +98,25 @@
 	// Check if the extension has a previously saved config
 	// If not, create a default config
 	function CheckStorage(){
-		const default_filters = ["$release_date$", "$tracks$, $discs$ [$disc_ratio$]", "$length$"]
-		const default_icons = ["enhance", "album", "clock"]
-		const object = {"filters": default_filters, "icons": default_icons, "bools": {"allowScInToken": false, "showDiscCountIfSingle": false}}
-
 		if(LocalStorage.get(STORAGE_TOKEN) !== null) {
 			config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
 		} else {
-			LocalStorage.set(STORAGE_TOKEN, JSON.stringify(object))
-			config = object;
+			ResetStorageToDefault(true);
+			config = LocalStorage.get(STORAGE_TOKEN);
 		}
 	}
 
+	function ResetStorageToDefault(startup = false) {
+		const default_filters = ["$release_date$", "$tracks$, $discs$ [$disc_ratio$]", "$length$"];
+		const default_icons = ["enhance", "album", "clock"];
+		const object = {"filters": default_filters, "icons": default_icons, "bools": {"showDiscCountIfSingle": true}}
+
+		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(object))
+		Spicetify.showNotification(startup ? "Metadata Customizer: Created new config!" : "Restored default config!");
+	}
+
 	function SaveToStorage(){
+		// Save filters to local storage
 		for (let i = 0; i < 3; i++){
 			// @ts-expect-error
 			config["filters"][i] = document.getElementById(`metadata-config-filter-${i === 0 ? "one" : i === 1 ? "two" : "three"}`).value;
@@ -118,8 +124,14 @@
 			config["icons"][i] = document.getElementById(`metadata-config-icon-${i === 0 ? "one" : i === 1 ? "two" : "three"}`).value;
 		}
 
+		// Save booleans to local storage
+		for (let i = 0; i < Object.keys(config["bools"]).length; i++){
+			// @ts-expect-error
+			config["bools"][Object.keys(config["bools"])[i]] = document.getElementById(`metadata-config-bool-${Object.keys(config["bools"])[i]}`).checked;
+		}
+
 		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(config));
-		console.log("Config Saved")
+		Spicetify.showNotification("Config Saved!")
 	}
 
 	// Check if the current page is an album
@@ -158,13 +170,13 @@
 	// Customization Configuration Menu \\
 	function CreateConfigMenu(){
 		const background = document.createElement("div");
-		background.id = "metadata-customization-config"
-		background.className = "";
+		background.id = "metadata-customization-overlay"
+		background.className = "context-menu-container";
 		background.style.zIndex = "1029";
 
 		const style = document.createElement("style")
 		style.textContent = `
-#metadata-customization-config {
+#metadata-customization-overlay {
 	position: absolute;
 	left: 0;
 	right: 0;
@@ -173,15 +185,25 @@
 	z-index: 5000;
 }
 
-#metadata-customization-options {
+#metadata-customization-config {
 	display: inline-block;
 	width: 55%;
-	min-width: 465px;
-	max-height: 15%;
+	min-width: 475px;
+	max-height: 35%;
 	overflow: hidden auto;
 	padding-bottom: 10px;
 	position: absolute;
 	z-index: 5001;
+}
+
+#metadata-config-navigation {
+	display: flex;
+	justify-content: space-around;
+	padding-top: 10px;
+}
+
+#metadata-config-boolean-container, #metadata-config-filter-container {
+	padding: 8px;
 }
 
 .metadata-config-icon-input {
@@ -190,30 +212,39 @@
 	padding: 0 8px 0 12px;
 	height: 32px;
 	align-items: center;
-	background: var(--spice-card);
+	background: transparent;
 	border: 0;
 	color: var(--spice-text);
 }
 
-.metadata-config-filter-label {
-	width: 150px;
+.metadata-config-icon-input option {
+	background: var(--spice-card);
 }
 
 .metadata-config-filter-input {
 	color: var(--spice-text);
-	background: var(--spice-card);
+	background: transparent;
 	margin-left: 8px;
 	padding: 0 8px 0 12px;
 }
 
-.metadata-config-btn-apply {
-	background: var(--spice-button);
-	color: var(--spice-text);
-	padding: 5px;
+.metadata-config-flex {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.metadata-config-flex-label {
+	flex-grow: 1;
+	width: 175px;
+}
+
+.metadata-config-flex-input {
+	flex-grow: 3;
 }
 `;
-		const children = document.createElement("div");
-		children.id = "metadata-customization-options";
+		const children = document.createElement("ul");
+		children.id = "metadata-customization-config";
 		children.className = "main-contextMenu-menu";
 		children.onclick = (event) => event.stopPropagation();
 
@@ -224,32 +255,77 @@
 	function CreateConfigOptions(parent){
 		let font_color = "var(--spice-text)";
 
-		let title = document.createElement("h2")
-		title.innerText = "Metadata Customization";
-		title.style.color = font_color;
+		let navigation = document.createElement("li");
+		navigation.id = "metadata-config-navigation"
 
-		let valid_tokens = document.createElement("h5");
+		// Navigation Buttons
+		const navigation_headers = ["filters", "options"]
+		for (let i = 0; i < navigation_headers.length; i++){
+			let nav_btn = document.createElement("button")
+			nav_btn.id = `metadata-config-navigation-${navigation_headers[i]}`
+			nav_btn.className = i === 0 ? "main-buttons-button main-button-primary" : "main-buttons-button main-button-secondary";
+			nav_btn.innerText = navigation_headers[i][0].toUpperCase() + navigation_headers[i].substring(1);
+
+			nav_btn.onclick = (event) => {
+				SwitchPage(navigation_headers[i]);
+				event.stopPropagation();
+			};
+
+			navigation.append(nav_btn);
+		}
+
+		let valid_tokens = document.createElement("p");
 		valid_tokens.innerText = `Valid Tokens:	${"$" + data_types.toString().replace(/,/g, "$, $") + "$"}`;
 		valid_tokens.style.color = font_color;
 
+		let filter_container = document.createElement("li");
+		// filter_container.append(valid_tokens);
+		filter_container.id = "metadata-config-filter-container";
 
-		parent.append(title, valid_tokens);
+		let boolean_container = document.createElement("li");
+		boolean_container.style.display = "none";
+		boolean_container.id = "metadata-config-boolean-container";
 
-		// Metadata Lines
-		for (var i = 0; i < 3; i++) {
+		// Boolean Options
+		for (let i = 0; i < Object.keys(config["bools"]).length; i++){
+			// TODO: Add descriptions to options
+			let attribute = Object.keys(config["bools"])[i];
+
+			let checkbox_label = document.createElement("label");
+			let checkbox_input = document.createElement("input");
+
+			checkbox_label.setAttribute("for", `metadata-config-bool-${attribute}`);
+			checkbox_label.className = "metadata-config-flex-label";
+			checkbox_label.innerText = attribute;
+			checkbox_label.style.color = font_color;
+
+			checkbox_input.type = "checkbox"
+			checkbox_input.className = "metadata-config-flex-input";
+			checkbox_input.id = `metadata-config-bool-${attribute}`
+			checkbox_input.checked = config["bools"][attribute]
+
+			boolean_container.append(checkbox_label, checkbox_input)
+		}
+
+		// Filter Lines
+		for (let i = 0; i < 3; i++) {
 			let label = i === 0 ? "one" : i === 1 ? "two" : "three";
 
 			let metadata_icon_line = document.createElement("div");
 			let metadata_filter_line = document.createElement("div");
 
+			metadata_icon_line.className = "metadata-config-flex";
+			metadata_filter_line.className = "metadata-config-flex";
+
 			let icon_label = document.createElement("label");
 			let icon_input = document.createElement("select");
 
 			icon_label.setAttribute("for", "metadata-config-icon-" + label);
+			icon_label.className = "metadata-config-flex-label";
 			icon_label.innerText = "Icon: ";
 			icon_label.style.color = font_color;
 
-			icon_input.className = "GlueDropdown metadata-config-icon-input"
+			icon_input.className = "metadata-config-flex-input metadata-config-icon-input"
 			icon_input.onclick = (event) => event.stopPropagation();
 			icon_input.id = "metadata-config-icon-" + label;
 
@@ -269,29 +345,53 @@
 
 			filter_label.setAttribute("for", "metadata-config-filter-" + label)
 			filter_label.innerText = `Metadata Line ${label[0].toUpperCase() + label.substring(1)}: `
-			filter_label.className = "metadata-config-filter-label";
+			filter_label.className = "metadata-config-flex-label";
 			filter_label.style.color = font_color;
 
 			filter_input.type = "text";
 			filter_input.name = "metadata-config-filter-" + label;
 			filter_input.id = "metadata-config-filter-" + label;
-			filter_input.className = "metadata-config-filter-input";
+			filter_input.className = "metadata-config-flex-input metadata-config-filter-input";
 			filter_input.value = config["filters"][i];
 
 			metadata_icon_line.append(icon_label, icon_input)
 			metadata_filter_line.append(filter_label, filter_input);
-			parent.append(metadata_icon_line, metadata_filter_line);
+			filter_container.append(metadata_icon_line, metadata_filter_line);
 		}
+
+		let button_container = document.createElement("li");
+		button_container.style.display = "flex";
+		button_container.style.flexDirection = "row";
+		button_container.style.justifyContent = "space-evenly";
 
 		let apply_button = document.createElement("button");
 		apply_button.innerText = "Apply Config";
-		apply_button.className = "metadata-config-btn-apply"
+		apply_button.className = "main-buttons-button main-button-primary"
 		apply_button.onclick = (event) => {
 			SaveToStorage();
-			event.stopPropagation();
-		};
+			document.getElementById("metadata-customization-overlay").remove();
+		}
 
-		parent.append(apply_button);
+		let reset_button = document.createElement("button");
+		reset_button.innerText = "Restore Defaults";
+		reset_button.className = "main-buttons-button main-button-secondary";
+		reset_button.onclick = () => {
+			// TODO: Add warning popup
+			ResetStorageToDefault();
+			document.getElementById("metadata-customization-overlay").remove();
+		}
+
+		button_container.append(apply_button, reset_button);
+		parent.append(navigation, filter_container, boolean_container, button_container);
+	}
+
+	function SwitchPage(element){
+		document.getElementById(element === "filters" ? "metadata-config-filter-container" : "metadata-config-boolean-container").style.display = "block";
+		document.getElementById(element === "filters" ? "metadata-config-boolean-container" : "metadata-config-filter-container").style.display = "none";
+		document.getElementById(element === "filters" ? "metadata-config-navigation-filters" : "metadata-config-navigation-options").classList
+			.replace("main-button-secondary", "main-button-primary");
+			document.getElementById(element === "filters" ? "metadata-config-navigation-options" : "metadata-config-navigation-filters").classList
+			.replace("main-button-primary", "main-button-secondary");
 	}
 
 	class Customization{
@@ -322,7 +422,7 @@
 			for (var t = 0; t < found.length; t++){
 				new_input = new_input.replace(new RegExp("(?<Opening>(?:, *)*[\\(\\[\\{]*)*(?<Token>\\$" + 
 					`(${found[t]})` + "\\$)(?<Closing>[\\}\\]\\)]*)*", "g"), 
-				"$<Opening>" + this.data[found[t]] + "$<Closing>")
+					this.data[found[t]] !== "" ? "$<Opening>" + this.data[found[t]] + "$<Closing>" : "");
 			}
 
 			// Return the new string
