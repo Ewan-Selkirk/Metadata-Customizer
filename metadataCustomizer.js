@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.4
+// VERSION: 0.5
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -10,6 +10,22 @@
 (function MetadataCustomizer() {
 	const {Player, Platform, CosmosAsync, LocalStorage, React, SVGIcons} = Spicetify;
 	const data_types = ["release_date", "tracks", "discs", "disc_ratio", "length"]
+
+	// Used for previewing filters in the configuration menu
+	const sample_data = {
+		"release_date": "Monday, August 14, 2000",
+		"tracks": "13 tracks",
+		"discs": "3 discs",
+		"disc_ratio": "5/4/4",
+		"length": "57 min 23 sec"
+	};
+
+	// Locale-based option descriptions
+	const option_descriptions = {
+		"en": {
+			"showDiscCountIfSingle": "Display number of discs and disc ratio if there is only one disc"
+		}
+	};
 
 	// Local Storage Token
 	const STORAGE_TOKEN = "Metadata_Customizer";
@@ -77,7 +93,7 @@
 
 		for (var i = 0; i < 3; i++){
 			let nestedHeader = MakeNewHeader(header);
-			let customization = new Customization(data_types, config["filters"][i], new_metadata);
+			let customization = new Customization(config["filters"][i], new_metadata);
 
 			// Create elements for the details
 			let icon = CreateSVG(SVGIcons[config["icons"][i]]);
@@ -85,7 +101,7 @@
 			let newElement = nestedHeader.appendChild(document.createElement("span"));
 
 			// Add details to the new header
-			newElement.classList.add("main-type-mesto");
+			newElement.className = "main-type-mesto";
 			newElement.innerText = customization.ParseCustomization();
 		}
 
@@ -102,7 +118,6 @@
 			config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
 		} else {
 			ResetStorageToDefault(true);
-			config = LocalStorage.get(STORAGE_TOKEN);
 		}
 	}
 
@@ -112,6 +127,7 @@
 		const object = {"filters": default_filters, "icons": default_icons, "bools": {"showDiscCountIfSingle": true}}
 
 		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(object))
+		config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
 		Spicetify.showNotification(startup ? "Metadata Customizer: Created new config!" : "Restored default config!");
 	}
 
@@ -124,11 +140,8 @@
 			config["icons"][i] = document.getElementById(`metadata-config-icon-${i === 0 ? "one" : i === 1 ? "two" : "three"}`).value;
 		}
 
-		// Save booleans to local storage
-		for (let i = 0; i < Object.keys(config["bools"]).length; i++){
-			// @ts-expect-error
-			config["bools"][Object.keys(config["bools"])[i]] = document.getElementById(`metadata-config-bool-${Object.keys(config["bools"])[i]}`).checked;
-		}
+		// Options currently change the value in the config object directly
+		// Therefore they do not need to be accessed here to be saved
 
 		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(config));
 		Spicetify.showNotification("Config Saved!")
@@ -158,11 +171,11 @@
 	function MakeNewHeader(parent){
 		// Create new header element
 		var newHeader = parent.appendChild(document.createElement("div"));
-		newHeader.classList.add("main-entityHeader-metaData");
+		newHeader.className = "main-entityHeader-metaData";
 
 		// The header has a nested div that gives nice spacing
 		var nestedHeader = newHeader.appendChild(document.createElement("div"));
-		nestedHeader.classList.add("main-entityHeader-creatorWrapper");
+		nestedHeader.className = "main-entityHeader-creatorWrapper";
 	
 		return nestedHeader;
 	}
@@ -206,6 +219,15 @@
 	padding: 8px;
 }
 
+#metadata-config-footer {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: center;
+	align-content: center;
+	justify-content: center;
+}
+
 .metadata-config-icon-input {
 	margin-left: 8px;
 	border-radius: 4px;
@@ -232,6 +254,7 @@
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
+	align-items: center;
 }
 
 .metadata-config-flex-label {
@@ -241,6 +264,31 @@
 
 .metadata-config-flex-input {
 	flex-grow: 3;
+}
+
+.metadata-config-option-label {
+	flex-grow: 3;
+	width: 150px;
+}
+
+.metadata-config-option-input {
+	flex-grow: 1;
+	padding-left: 75px;
+}
+
+.metadata-config-option-button {
+	align-items: center;
+	border: 0;
+	cursor: pointer;
+	color: var(--spice-button);
+	background-color: rbga(var(--spice-rgb-shadow), .7);
+	display: flex;
+	margin-inline-start: 12px;
+	padding: 8px;
+}
+
+.metadata-config-option-button.disabled {
+	color: rbga(var(--spice-rgb-text), .3);
 }
 `;
 		const children = document.createElement("ul");
@@ -288,23 +336,48 @@
 
 		// Boolean Options
 		for (let i = 0; i < Object.keys(config["bools"]).length; i++){
-			// TODO: Add descriptions to options
+			let option_container = document.createElement("div");
+			option_container.className = "metadata-config-flex";
+
 			let attribute = Object.keys(config["bools"])[i];
 
-			let checkbox_label = document.createElement("label");
-			let checkbox_input = document.createElement("input");
+			let checkbox_container_input = document.createElement("div")
+			checkbox_container_input.className = "metadata-config-option-input";
 
-			checkbox_label.setAttribute("for", `metadata-config-bool-${attribute}`);
-			checkbox_label.className = "metadata-config-flex-label";
-			checkbox_label.innerText = attribute;
+			let checkbox_label = document.createElement("label");
+			checkbox_label.className = "metadata-config-option-label";
+			// Get translated description string. If null, fallback to English
+			// @ts-expect-error
+			checkbox_label.innerText = option_descriptions[(Spicetify.Locale._locale in option_descriptions) ? Spicetify.Locale._locale : "en"][attribute];
 			checkbox_label.style.color = font_color;
 
-			checkbox_input.type = "checkbox"
-			checkbox_input.className = "metadata-config-flex-input";
-			checkbox_input.id = `metadata-config-bool-${attribute}`
-			checkbox_input.checked = config["bools"][attribute]
+			let checkbox_input = document.createElement("button");
+			checkbox_input.className = "metadata-config-option-button";
+			if (!config["bools"][attribute]) checkbox_input.classList.add("disabled");
+			
+			// On Button clicked, invert bool and add/remove 'disabled' class
+			checkbox_input.onclick = (event) => {
+				config["bools"][attribute] = !config["bools"][attribute];
+				if (config["bools"][attribute] === true) {
+					checkbox_input.classList.remove("disabled");
+				} else {
+					checkbox_input.classList.add("disabled")
+				}
 
-			boolean_container.append(checkbox_label, checkbox_input)
+				event.stopPropagation();
+			}
+
+			let checkbox_input_icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+			checkbox_input_icon.setAttribute("width", "24");
+			checkbox_input_icon.setAttribute("height", "24");
+			checkbox_input_icon.setAttribute("viewBox", "0 0 24 24");
+			checkbox_input_icon.setAttribute("fill", "currentColor");
+			checkbox_input_icon.innerHTML = SVGIcons["check"];
+
+			checkbox_input.append(checkbox_input_icon);
+			checkbox_container_input.append(checkbox_label, checkbox_input);
+			option_container.append(checkbox_label, checkbox_container_input);
+			boolean_container.append(option_container);
 		}
 
 		// Filter Lines
@@ -328,6 +401,10 @@
 			icon_input.className = "metadata-config-flex-input metadata-config-icon-input"
 			icon_input.onclick = (event) => event.stopPropagation();
 			icon_input.id = "metadata-config-icon-" + label;
+			icon_input.onchange = () => {
+				document.getElementById(`metadata-config-preview-icon-${label}`)
+					.innerHTML = SVGIcons[icon_input.value];
+			};
 
 			// Add every SVG icon as an option to the select element
 			Object.keys(SVGIcons).sort().forEach(element => {
@@ -353,6 +430,11 @@
 			filter_input.id = "metadata-config-filter-" + label;
 			filter_input.className = "metadata-config-flex-input metadata-config-filter-input";
 			filter_input.value = config["filters"][i];
+			filter_input.oninput = () => {
+				let customization = new Customization(filter_input.value, sample_data)
+				document.getElementById(`metadata-config-preview-filter-${label}`)
+					.innerText = customization.ParseCustomization();
+			}
 
 			metadata_icon_line.append(icon_label, icon_input)
 			metadata_filter_line.append(filter_label, filter_input);
@@ -360,6 +442,7 @@
 		}
 
 		let button_container = document.createElement("li");
+		button_container.style.width = "-webkit-fill-available";
 		button_container.style.display = "flex";
 		button_container.style.flexDirection = "row";
 		button_container.style.justifyContent = "space-evenly";
@@ -381,8 +464,38 @@
 			document.getElementById("metadata-customization-overlay").remove();
 		}
 
+		let footer = document.createElement("li");
+		footer.id = "metadata-config-footer"
+
+		let preview = document.createElement("div");
+		
+		// Filter Preview
+		for (let i = 0; i < 3; i++){
+			let label = i === 0 ? "one" : i === 1 ? "two" : "three";
+			let filter_preview = document.createElement("div");
+			filter_preview.className = "main-entityHeader-creatorWrapper";
+			filter_preview.style.paddingBottom = "8px";
+
+			let preview_icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+			preview_icon.setAttribute("width", "24");
+			preview_icon.setAttribute("height", "24");
+			preview_icon.setAttribute("fill", "currentColor");
+			preview_icon.setAttribute("viewBox", "0 0 16 16");
+			preview_icon.innerHTML = SVGIcons[config["icons"][i]];
+			preview_icon.id = `metadata-config-preview-icon-${label}`;
+
+			let preview_text = document.createElement("span");
+			preview_text.id = `metadata-config-preview-filter-${label}`;
+			preview_text.className = "main-type-mesto";
+			preview_text.innerText = new Customization(config["filters"][i], sample_data).ParseCustomization();
+
+			filter_preview.append(preview_icon, preview_text);
+			preview.append(filter_preview);
+		}
+
 		button_container.append(apply_button, reset_button);
-		parent.append(navigation, filter_container, boolean_container, button_container);
+		footer.append(preview, button_container)
+		parent.append(navigation, filter_container, boolean_container, footer);
 	}
 
 	function SwitchPage(element){
@@ -397,12 +510,11 @@
 	class Customization{
 		/**
 		 * Constructor for the Customization Class
-		 * @param {string[]} tokens List of valid data types
 		 * @param {string} input The string to check for tokens in
-		 * @param {string[]} data The data to match the tokens to
+		 * @param {{}} data The data to match the tokens to
 		 */
-		constructor(tokens, input, data){
-			this.tokens = tokens;
+		constructor(input, data){
+			this.tokens = data_types;
 			this.input = input;
 			this.data = data;
 		}
