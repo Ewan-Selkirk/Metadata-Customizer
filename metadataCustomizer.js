@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.6
+// VERSION: 0.6.1
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -71,10 +71,11 @@
 			let details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
 			
 			let tracks = [];
+			let extra_details = [];
 			let disc_count = {}
 
 			if (details.tracks.next !== null) {
-				var extra_details = await GetAllTracks(details.tracks.next);
+				extra_details = await GetAllTracks(details.tracks.next);
 			}
 
 			tracks = tracks.concat(details.tracks.items, extra_details);
