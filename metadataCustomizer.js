@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.5
+// VERSION: 0.5.1
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -96,7 +96,7 @@
 			let customization = new Customization(config["filters"][i], new_metadata);
 
 			// Create elements for the details
-			let icon = CreateSVG(SVGIcons[config["icons"][i]]);
+			let icon = CreateSVG(SVGIcons[config["icons"][i]], "24", "24");
 			nestedHeader.appendChild(icon);
 			let newElement = nestedHeader.appendChild(document.createElement("span"));
 
@@ -155,16 +155,57 @@
 	}
 
 	// Create an SVG element with all the attributes already set
-	function CreateSVG(svg) {
+	function CreateSVG(svg, width, height, vb_w = 16, vb_h = 16) {
 		var elem = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 		elem.setAttribute("role", "img");
-		elem.setAttribute("height", "24");
-		elem.setAttribute("width", "24");
+		elem.setAttribute("width", width);
+		elem.setAttribute("height", height);
 		elem.setAttribute("fill", "currentColor");
-		elem.setAttribute("viewBox", "0 0 16 16");
+		elem.setAttribute("viewBox", `0 0 ${vb_w} ${vb_h}`);
 		elem.innerHTML = svg;
 
 		return elem;
+	}
+
+
+	/** 
+	 * @param {string} Title of popup.
+	 * @param {string} Descriptive text.
+	 * @param {{text: string[], callbacks: Array}} Object containing the button label and function for the button to perform on click.
+	 * */
+	function CreatePopup(title, description, buttons) {
+		let container = document.createElement("div");
+
+		let desc = document.createElement("p");
+		desc.innerText = description;
+		desc.style.textAlign = "center";
+		desc.style.paddingBottom = "20px";
+
+		let button_container = document.createElement("div");
+		button_container.className = "metadata-config-flex";
+
+		for (let i = 0; i < buttons["labels"].length; i++){
+			let btn = document.createElement("button");
+			btn.innerText = buttons["labels"][i];
+			btn.className = "main-buttons-button"
+			btn.classList.add(i === 0 ? "main-button-primary" : "main-button-secondary");
+
+			btn.onclick = (event) => {
+				event.stopPropagation();
+				buttons["callbacks"][i]();
+				if (i === 0){
+					document.getElementById("metadata-customization-overlay").remove();
+				}
+				document.getElementsByTagName("generic-modal")[0].remove();
+			};
+
+			button_container.append(btn);
+		}
+
+		container.append(desc, button_container);
+
+
+		Spicetify.PopupModal.display({title: title, content: container, isLarge: false});
 	}
 
 	// Create a new metadata header
@@ -185,7 +226,7 @@
 		const background = document.createElement("div");
 		background.id = "metadata-customization-overlay"
 		background.className = "context-menu-container";
-		background.style.zIndex = "1029";
+		background.style.zIndex = "99";
 
 		const style = document.createElement("style")
 		style.textContent = `
@@ -195,7 +236,6 @@
 	right: 0;
 	width: 100vw;
 	height: 100vw;
-	z-index: 5000;
 }
 
 #metadata-customization-config {
@@ -206,7 +246,6 @@
 	overflow: hidden auto;
 	padding-bottom: 10px;
 	position: absolute;
-	z-index: 5001;
 }
 
 #metadata-config-navigation {
@@ -322,9 +361,9 @@
 			navigation.append(nav_btn);
 		}
 
-		let valid_tokens = document.createElement("p");
-		valid_tokens.innerText = `Valid Tokens:	${"$" + data_types.toString().replace(/,/g, "$, $") + "$"}`;
-		valid_tokens.style.color = font_color;
+		// let valid_tokens = document.createElement("p");
+		// valid_tokens.innerText = `Valid Tokens:	${"$" + data_types.toString().replace(/,/g, "$, $") + "$"}`;
+		// valid_tokens.style.color = font_color;
 
 		let filter_container = document.createElement("li");
 		// filter_container.append(valid_tokens);
@@ -367,12 +406,7 @@
 				event.stopPropagation();
 			}
 
-			let checkbox_input_icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-			checkbox_input_icon.setAttribute("width", "24");
-			checkbox_input_icon.setAttribute("height", "24");
-			checkbox_input_icon.setAttribute("viewBox", "0 0 24 24");
-			checkbox_input_icon.setAttribute("fill", "currentColor");
-			checkbox_input_icon.innerHTML = SVGIcons["check"];
+			let checkbox_input_icon = CreateSVG(SVGIcons["check"], "24", "24", 24, 24);
 
 			checkbox_input.append(checkbox_input_icon);
 			checkbox_container_input.append(checkbox_label, checkbox_input);
@@ -459,15 +493,15 @@
 		reset_button.innerText = "Restore Defaults";
 		reset_button.className = "main-buttons-button main-button-secondary";
 		reset_button.onclick = () => {
-			// TODO: Add warning popup
-			ResetStorageToDefault();
-			document.getElementById("metadata-customization-overlay").remove();
+			CreatePopup("Warning!", "This will completely reset your configurations!\n Are you sure you want to continue?", 
+				{labels: ["Restore Config", "Cancel"], callbacks: [ResetStorageToDefault, () => {}]});
 		}
 
 		let footer = document.createElement("li");
 		footer.id = "metadata-config-footer"
 
 		let preview = document.createElement("div");
+		preview.style.color = "var(--spice-text)";
 		
 		// Filter Preview
 		for (let i = 0; i < 3; i++){
@@ -476,12 +510,7 @@
 			filter_preview.className = "main-entityHeader-creatorWrapper";
 			filter_preview.style.paddingBottom = "8px";
 
-			let preview_icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-			preview_icon.setAttribute("width", "24");
-			preview_icon.setAttribute("height", "24");
-			preview_icon.setAttribute("fill", "currentColor");
-			preview_icon.setAttribute("viewBox", "0 0 16 16");
-			preview_icon.innerHTML = SVGIcons[config["icons"][i]];
+			let preview_icon = CreateSVG(SVGIcons[config["icons"][i]], "24", "24");
 			preview_icon.id = `metadata-config-preview-icon-${label}`;
 
 			let preview_text = document.createElement("span");
@@ -503,7 +532,7 @@
 		document.getElementById(element === "filters" ? "metadata-config-boolean-container" : "metadata-config-filter-container").style.display = "none";
 		document.getElementById(element === "filters" ? "metadata-config-navigation-filters" : "metadata-config-navigation-options").classList
 			.replace("main-button-secondary", "main-button-primary");
-			document.getElementById(element === "filters" ? "metadata-config-navigation-options" : "metadata-config-navigation-filters").classList
+		document.getElementById(element === "filters" ? "metadata-config-navigation-options" : "metadata-config-navigation-filters").classList
 			.replace("main-button-primary", "main-button-secondary");
 	}
 
