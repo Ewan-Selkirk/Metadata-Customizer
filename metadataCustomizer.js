@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.5.1
+// VERSION: 0.6
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -69,10 +69,18 @@
 
 		let metadata_promise = new Promise(async function(resolve) {
 			let details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
+			
+			let tracks = [];
 			let disc_count = {}
+
+			if (details.tracks.next !== null) {
+				var extra_details = await GetAllTracks(details.tracks.next);
+			}
+
+			tracks = tracks.concat(details.tracks.items, extra_details);
 	
 			// Count how many tracks there are per disc (Why does the API not just have this already???)
-			details.tracks.items.forEach(track => disc_count[track.disc_number] = (disc_count[track.disc_number] || 0) + 1);
+			tracks.forEach(track => disc_count[track.disc_number] = (disc_count[track.disc_number] || 0) + 1);
 
 			resolve({
 				// Convert YYYY-MM-DD -> Unix -> Long Date
@@ -109,6 +117,20 @@
 		for (var i = 0; i < 2; i++){
 			metadata.lastChild.remove();
 		}
+	}
+
+	// Called if an album has more than 50 tracks
+	async function GetAllTracks(album) {
+		let details = await CosmosAsync.get(album);
+		let store = details.items;
+
+		// Recursive call for albums > 100 tracks
+		if (details.next !== null) {
+			store = store.concat(await GetAllTracks(details.next));
+		}
+
+		// Return array of tracks
+		return store;
 	}
 
 	// Check if the extension has a previously saved config
