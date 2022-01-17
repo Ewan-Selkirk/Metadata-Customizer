@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.6.1
+// VERSION: 0.6.2
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -90,8 +90,10 @@
 				tracks: (details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")),
 				// Return # of disc(s) & the ratio of track to disc
 				// or just "1 disc" if only one disc
-				discs: config["bools"]["showDiscCountIfSingle"] ? Object.keys(disc_count).length.toString() + (Object.keys(disc_count).length === 1 ? " disc" : " discs") : "",
-				disc_ratio: config["bools"]["showDiscCountIfSingle"] ? Object.values(disc_count).toString().replace(/,/g, "/") : "",
+				discs: (Object.keys(disc_count).length > 1 || config["bools"]["showDiscCountIfSingle"]) ? 
+					Object.keys(disc_count).length.toString() + (Object.keys(disc_count).length === 1 ? " disc" : " discs") : "",
+				disc_ratio: (Object.keys(disc_count).length > 1 || config["bools"]["showDiscCountIfSingle"]) ? 
+					Object.values(disc_count).toString().replace(/,/g, "/") : "",
 				// @ts-expect-error
 				length: metadata.lastChild.innerText.split(", ")[1] ?? "Unavailable"
 			})
@@ -192,9 +194,9 @@
 
 
 	/** 
-	 * @param {string} Title of popup.
-	 * @param {string} Descriptive text.
-	 * @param {{text: string[], callbacks: Array}} Object containing the button label and function for the button to perform on click.
+	 * @param {string} title Title of popup.
+	 * @param {string} description Descriptive text.
+	 * @param {{labels: string[], callbacks: Array}} buttons Object containing the button label and function for the button to perform on click.
 	 * */
 	function CreatePopup(title, description, buttons) {
 		let container = document.createElement("div");
@@ -410,7 +412,7 @@
 			checkbox_label.className = "metadata-config-option-label";
 			// Get translated description string. If null, fallback to English
 			// @ts-expect-error
-			checkbox_label.innerText = option_descriptions[(Spicetify.Locale._locale in option_descriptions) ? Spicetify.Locale._locale : "en"][attribute];
+			checkbox_label.innerText = option_descriptions[(Spicetify.Locale.getLocale() in option_descriptions) ? Spicetify.Locale._locale : "en"][attribute];
 			checkbox_label.style.color = font_color;
 
 			let checkbox_input = document.createElement("button");

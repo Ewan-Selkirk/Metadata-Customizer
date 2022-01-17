@@ -41,4 +41,4 @@ Got a suggestion? Feel free to [make an issue](https://github.com/Ewan-Selkirk/M
 
 ## Acknowledgements
 - [bookmark.js](https://github.com/khanhas/spicetify-cli/blob/master/Extensions/bookmark.js) for demonstrating how to make a pretty configuration menu and giving me a lot of pointers
-- [Spicetify-Comfy](https://github.com/NYRI4/Comfy-spicetify) theme which is used in the screenshots
+- [Comfy-Spicetify](https://github.com/NYRI4/Comfy-spicetify) theme which is used in the screenshots

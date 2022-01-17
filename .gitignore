@@ -1,2 +1,3 @@
 .vscode/*
+*.sh
 *.ps1
