@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.6.2
+// VERSION: 0.6.3
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -94,7 +94,7 @@
 					Object.keys(disc_count).length.toString() + (Object.keys(disc_count).length === 1 ? " disc" : " discs") : "",
 				disc_ratio: (Object.keys(disc_count).length > 1 || config["bools"]["showDiscCountIfSingle"]) ? 
 					Object.values(disc_count).toString().replace(/,/g, "/") : "",
-				// @ts-expect-error
+				// @ts-ignore
 				length: metadata.lastChild.innerText.split(", ")[1] ?? "Unavailable"
 			})
 		});
@@ -116,9 +116,11 @@
 			newElement.innerText = customization.ParseCustomization();
 		}
 
-		// Remove default metadata
-		for (var i = 0; i < 2; i++){
-			metadata.lastChild.remove();
+		// Hide default metadata
+		// @ts-ignore
+		for (var i = metadata.childElementCount - 1; i > metadata.childElementCount - 1 - 2; i--){
+			// @ts-ignore
+			metadata.childNodes[i].style.display = "none";
 		}
 	}
 
@@ -159,9 +161,9 @@
 	function SaveToStorage(){
 		// Save filters to local storage
 		for (let i = 0; i < 3; i++){
-			// @ts-expect-error
+			// @ts-ignore
 			config["filters"][i] = document.getElementById(`metadata-config-filter-${i === 0 ? "one" : i === 1 ? "two" : "three"}`).value;
-			// @ts-expect-error
+			// @ts-ignore
 			config["icons"][i] = document.getElementById(`metadata-config-icon-${i === 0 ? "one" : i === 1 ? "two" : "three"}`).value;
 		}
 
@@ -411,7 +413,7 @@
 			let checkbox_label = document.createElement("label");
 			checkbox_label.className = "metadata-config-option-label";
 			// Get translated description string. If null, fallback to English
-			// @ts-expect-error
+			// @ts-ignore
 			checkbox_label.innerText = option_descriptions[(Spicetify.Locale.getLocale() in option_descriptions) ? Spicetify.Locale._locale : "en"][attribute];
 			checkbox_label.style.color = font_color;
 
@@ -509,6 +511,7 @@
 		let apply_button = document.createElement("button");
 		apply_button.innerText = "Apply Config";
 		apply_button.className = "main-buttons-button main-button-primary"
+		// @ts-ignore
 		apply_button.onclick = (event) => {
 			SaveToStorage();
 			document.getElementById("metadata-customization-overlay").remove();
