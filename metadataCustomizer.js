@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.6.3
+// VERSION: 0.6.4
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../../globals.d.ts" />
@@ -23,7 +23,8 @@
 	// Locale-based option descriptions
 	const option_descriptions = {
 		"en": {
-			"showDiscCountIfSingle": "Display number of discs and disc ratio if there is only one disc"
+			"showDiscCountIfSingle": "Display number of discs and disc ratio if there is only one disc",
+			"showTrackCountIfSingle": "Display number of tracks if there is only one track"
 		}
 	};
 
@@ -87,7 +88,8 @@
 				// Convert YYYY-MM-DD -> Unix -> Long Date
 				release_date: new Intl.DateTimeFormat("default", {dateStyle: "full"}).format(Date.parse(details.release_date)),
 				// Return # of tracks
-				tracks: (details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")),
+				tracks: details.tracks.total > 1 || config["bools"]["showTrackCountIfSingle"] ? 
+					(details.tracks.total.toString() + (details.tracks.total === 1 ? " track" : " tracks")) : "",
 				// Return # of disc(s) & the ratio of track to disc
 				// or just "1 disc" if only one disc
 				discs: (Object.keys(disc_count).length > 1 || config["bools"]["showDiscCountIfSingle"]) ? 
@@ -143,19 +145,33 @@
 	function CheckStorage(){
 		if(LocalStorage.get(STORAGE_TOKEN) !== null) {
 			config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
+
+			if (Object.keys(config["bools"]).length < Object.keys(GetDefaultConfig()["bools"]).length) {
+				Object.keys(GetDefaultConfig()["bools"]).forEach(key => config["bools"][key] = config["bools"][key] || 
+					GetDefaultConfig()["bools"][key]);
+				LocalStorage.set(STORAGE_TOKEN, JSON.stringify(config));
+				Spicetify.showNotification("Metadata Customizer: Added new options to config!")
+			}
 		} else {
 			ResetStorageToDefault(true);
 		}
 	}
 
+	// Set local storage back to the default config.
+	// 'startup' var changes the notification message printed
 	function ResetStorageToDefault(startup = false) {
+		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(GetDefaultConfig()))
+		config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
+		Spicetify.showNotification(startup ? "Metadata Customizer: Created new config!" : "Metadata Customizer: Restored default config!");
+	}
+
+	// Return a copy of the default config
+	function GetDefaultConfig() {
 		const default_filters = ["$release_date$", "$tracks$, $discs$ [$disc_ratio$]", "$length$"];
 		const default_icons = ["enhance", "album", "clock"];
-		const object = {"filters": default_filters, "icons": default_icons, "bools": {"showDiscCountIfSingle": true}}
+		const default_bools = {"showDiscCountIfSingle": false, "showTrackCountIfSingle": true}
 
-		LocalStorage.set(STORAGE_TOKEN, JSON.stringify(object))
-		config = JSON.parse(LocalStorage.get(STORAGE_TOKEN));
-		Spicetify.showNotification(startup ? "Metadata Customizer: Created new config!" : "Restored default config!");
+		return {"filters": default_filters, "icons": default_icons, "bools": default_bools}
 	}
 
 	function SaveToStorage(){
@@ -181,7 +197,15 @@
 		}
 	}
 
-	// Create an SVG element with all the attributes already set
+	/**
+	 * Create an SVG element with all the attributes already set
+	 * @param {string} svg SVG path element
+	 * @param {string} width Width of icon
+	 * @param {string} height Height of icon
+	 * @param {number} vb_w 
+	 * @param {number} vb_h 
+	 * @returns SVG document element
+	 */
 	function CreateSVG(svg, width, height, vb_w = 16, vb_h = 16) {
 		var elem = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 		elem.setAttribute("role", "img");
