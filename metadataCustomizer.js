@@ -2,7 +2,7 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.7.0
+// VERSION: 0.7.1
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
 /// <reference path="../globals.d.ts" />
@@ -125,7 +125,7 @@
 		// Hide default metadata
 		let multiArtist = metadata.childElementCount > 3;
 		
-		for (var i = multiArtist ? 3 : 1; i < metadata.childElementCount - 3; i++) {
+		for (var i = multiArtist ? 2 : 1; i < metadata.childElementCount - 3; i++) {
 			metadata.childNodes[i].style.display = "none";
 		}
 
