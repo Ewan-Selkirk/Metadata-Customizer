@@ -2,10 +2,10 @@
 
 // NAME: MetadataCustomizer
 // AUTHOR: Ewan Selkirk
-// VERSION: 0.6.4
+// VERSION: 0.7.0
 // DESCRIPTION: A Spicetify extension that allows you to customize how much track/album metadata is visible
 
-/// <reference path="../../globals.d.ts" />
+/// <reference path="../globals.d.ts" />
 
 (function MetadataCustomizer() {
 	const {Player, Platform, CosmosAsync, LocalStorage, React, SVGIcons} = Spicetify;
@@ -65,19 +65,24 @@
 	});
 
 	async function ModifyMetadata() {
-		let header = document.querySelector(".main-entityHeader-headerText");
-		let metadata = header.lastChild;
+		console.log("Modifying Metadata...")
+
+		let metadata = document.querySelector(".main-entityHeader-metaData");
+		metadata.style.flexDirection = "column";
+		metadata.style.alignItems = "start";
 
 		let metadata_promise = new Promise(async function(resolve) {
-			let details = await CosmosAsync.get("https://api.spotify.com/v1/albums/" + Platform.History.location.pathname.split("/")[2])
+			let details = await CosmosAsync.get("https://api.spotify.com/v1" 
+				+ Platform.History.location.pathname.replace("album", "albums").replace("track", "tracks")
+			);
 			
 			let tracks = [];
 			let extra_details = [];
 			let disc_count = {}
 
-			if (details.tracks.next !== null) {
+			/*if (details.tracks.next !== null) {
 				extra_details = await GetAllTracks(details.tracks.next);
-			}
+			}*/
 
 			tracks = tracks.concat(details.tracks.items, extra_details);
 	
@@ -96,7 +101,6 @@
 					Object.keys(disc_count).length.toString() + (Object.keys(disc_count).length === 1 ? " disc" : " discs") : "",
 				disc_ratio: (Object.keys(disc_count).length > 1 || config["bools"]["showDiscCountIfSingle"]) ? 
 					Object.values(disc_count).toString().replace(/,/g, "/") : "",
-				// @ts-ignore
 				length: metadata.lastChild.innerText.split(", ")[1] ?? "Unavailable"
 			})
 		});
@@ -105,7 +109,7 @@
 		var new_metadata = await metadata_promise;
 
 		for (var i = 0; i < 3; i++){
-			let nestedHeader = MakeNewHeader(header);
+			let nestedHeader = MakeNewHeader(metadata);
 			let customization = new Customization(config["filters"][i], new_metadata);
 
 			// Create elements for the details
@@ -119,10 +123,14 @@
 		}
 
 		// Hide default metadata
-		// @ts-ignore
-		for (var i = metadata.childElementCount - 1; i > metadata.childElementCount - 1 - 2; i--){
-			// @ts-ignore
+		let multiArtist = metadata.childElementCount > 3;
+		
+		for (var i = multiArtist ? 3 : 1; i < metadata.childElementCount - 3; i++) {
 			metadata.childNodes[i].style.display = "none";
+		}
+
+		if (multiArtist) {
+			metadata.childNodes[1].style.display = "none";
 		}
 	}
 
