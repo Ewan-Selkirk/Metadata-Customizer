@@ -14,7 +14,7 @@ It's always annoyed the hell out of me that Spotify doesn't show when a track or
 ## How to Install
 
  1. Follow [this guide](https://spicetify.app/docs/getting-started/installation) for instructions on how to install Spicetify for your platform, including the ['Basic Usage'](https://spicetify.app/docs/getting-started/basic-usage) page.
- 2. Run `spicetify path` to find where you Spicetify home folder is. This should contain  the folders `CustomApps & Themes`, and you may have to create an`Extensions` folder yourself.
+ 2. Run `spicetify path` to find where you Spicetify home folder is. This should contain  the folders `CustomApps & Themes`, and you may have to create an `Extensions` folder yourself.
  3. Drop the `metadataCustomizer.js` file into the `Extensions` folder.
  4. Run `spicetify config extensions metadataCustomizer.js` to enable the extension.
  5. Run `spicetify apply` to apply the changes and restart Spotify.
@@ -22,11 +22,11 @@ It's always annoyed the hell out of me that Spotify doesn't show when a track or
 ## List of Tokens
 | Token          | Value                                       |
 |----------------|---------------------------------------------|
-| $release_date$ | The date and year the track released        |
-| $tracks$       | Number of tracks in the album               |
-| $discs$        | Number of discs in the album                |
-| $disc_ratio$   | The ratio of # of tracks to disc (E.G. 7/8) |
-| $length$       | The length of the album                     |
+| `$release_date$` | The date and year the track released        |
+| `$tracks$`       | Number of tracks in the album               |
+| `$discs$`        | Number of discs in the album                |
+| `$disc_ratio$`   | The ratio of # of tracks to disc (E.G. 7/8) |
+| `$length$`       | The length of the album                     |
 
 Got a suggestion? Feel free to [make an issue](https://github.com/Ewan-Selkirk/Metadata-Customizer/issues/new?assignees=Ewan-Selkirk&labels=enhancement&template=token-request.md&title=%5BREQUEST%5D+) and I'll look into whether it's possible!
 
